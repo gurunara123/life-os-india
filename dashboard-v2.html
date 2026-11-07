@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0e17">
+<title>LIFE OS INDIA | Dashboard V2</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{--bg:#0a0f1b;--p:#152239;--p2:#1c2d47;--line:#30425d;--txt:#edf4ff;--muted:#aab9cf;--green:#27c995;--gold:#e5c47d;--red:#d96a7a;--blue:#70a9ff}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(145deg,#090e18,#14243b);color:var(--txt);font:15px/1.5 system-ui,Arial}
+.wrap{max-width:1150px;margin:auto;padding:20px}
+button,input,select{font:inherit}
+button{border:0;border-radius:11px;padding:11px 15px;background:var(--green);color:#05271d;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5}
+.secondary{background:#2b405e;color:#f1f6ff}
+.danger{background:#61313d;color:#ffe9ec}
+.gold{background:var(--gold);color:#241b0b}
+input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0d1829;color:var(--txt)}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}
+.brand{font-size:23px;font-weight:950;letter-spacing:1px}
+.brand span{color:var(--green)}
+.muted,small{color:var(--muted)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.card{background:linear-gradient(145deg,var(--p),#111d30);border:1px solid var(--line);border-radius:17px;padding:19px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.stat small{display:block}
+.stat b{font-size:26px}
+.tabs{display:flex;gap:8px;overflow:auto;padding:16px 0}
+.tabs button{white-space:nowrap;background:#263a57;color:#f0f5ff}
+.tabs button.active{background:var(--green);color:#05271d}
+.page{display:none}
+.page.active{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:0 13px}
+.full{grid-column:1/-1}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.list{display:grid;gap:9px;margin-top:14px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--p2);border:1px solid var(--line);border-radius:12px;padding:13px}
+.item strong,.item small{display:block}
+.item small{margin-top:3px}
+.item button{padding:7px 10px;font-size:12px}
+.progress{height:8px;background:#40516b;border-radius:20px;margin-top:7px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--green)}
+.note{padding:12px;border-radius:10px;background:#164338;color:#d4fff0;margin-top:12px}
+.err{background:#512b36;color:#ffe4e8}
+.empty{padding:15px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px;margin-top:12px}
+.chart{height:260px}
+.hidden{display:none!important}
+.auth{max-width:440px;margin:8vh auto}
+footer{text-align:center;color:#8090a7;font-size:12px;padding:25px 0}
+@media(max-width:700px){
+.wrap{padding:13px}
+.stats{grid-template-columns:1fr 1fr}
+.grid,.form{grid-template-columns:1fr}
+.full{grid-column:auto}
+.card{padding:15px}
+.stat b{font-size:22px}
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header class="top">
+<div>
+<div class="brand">LIFE OS <span>INDIA</span></div>
+<div class="muted">Take Control. Build Your Future.</div>
+</div>
+<div>
+<span id="who" class="muted"></span>
+<button id="refresh" class="secondary hidden">Refresh</button>
+<button id="logout" class="danger hidden">Logout</button>
+</div>
+</header>
+
+<section id="auth" class="card auth">
+<h2 id="authTitle">Welcome back</h2>
+<p class="muted">Login karein ya naya account banayein.</p>
+
+<label>Email</label>
+<input id="email" type="email" autocomplete="email">
+
+<label>Password</label>
+<input id="password" type="password" autocomplete="current-password">
+
+<div class="actions">
+<button id="authBtn">Login</button>
+<button id="switch" class="secondary">Create account</button>
+<button id="forgot" class="secondary">Forgot password?</button>
+</div>
+<div id="authMsg"></div>
+</section>
+
+<main id="app" class="hidden">
+
+<div class="stats">
+<div class="card stat"><small>Income this month</small><b id="income">₹0</b></div>
+<div class="card stat"><small>Expenses this month</small><b id="expense">₹0</b></div>
+<div class="card stat"><small>Net savings</small><b id="savings">₹0</b></div>
+<div class="card stat"><small>Budget planned</small><b id="budgetTotal">₹0</b></div>
+<div class="card stat"><small>Debt outstanding</small><b id="debtTotal">₹0</b></div>
+<div class="card stat"><small>Goals</small><b id="goalCount">0</b></div>
+</div>
+
+<nav class="tabs">
+<button class="active" data-page="overview">Overview</button>
+<button data-page="transactions">Income / Expenses</button>
+<button data-page="budgets">Budget</button>
+<button data-page="debts">Debts & EMI</button>
+<button data-page="goals">Goals</button>
+<button data-page="tasks">Tasks</button>
+<button data-page="reports">Reports</button>
+</nav>
+
+<section id="overview" class="page active">
+<div class="grid">
+<div class="card">
+<h2>Monthly snapshot</h2>
+<p id="snapshot" class="muted">Loading…</p>
+<div id="alerts"></div>
+</div>
+<div class="card">
+<h2>Income vs expenses</h2>
+<div class="chart"><canvas id="mainChart"></canvas></div>
+</div>
+</div>
+
+<div class="card" style="margin-top:14px">
+<h2>Recent activity</h2>
+<div id="recent" class="list"></div>
+</div>
+</section>
+
+<section id="transactions" class="page">
+<div class="card">
+<h2>Income / Expense Tracker</h2>
+
+<div class="form">
+<div>
+<label>Type</label>
+<select id="txType">
+<option value="expense">Expense</option>
+<option value="income">Income</option>
+</select>
+</div>
+
+<div>
+<label>Amount (₹)</label>
+<input id="txAmount" type="number" min=".01">
+</div>
+
+<div>
+<label>Category</label>
+<input id="txCategory" placeholder="Food, salary...">
+</div>
+
+<div>
+<label>Date</label>
+<input id="txDate" type="date">
+</div>
+
+<div class="full">
+<label>Note</label>
+<input id="txNote" placeholder="Optional">
+</div>
+</div>
+
+<div class="actions">
+<button id="saveTx">Save transaction</button>
+<button id="csv" class="secondary">Export CSV</button>
+</div>
+<div id="txList" class="list"></div>
+</div>
+</section>
+
+<section id="budgets" class="page">
+<div class="card">
+<h2>Monthly Budget</h2>
+<div class="form">
+<div><label>Category</label><input id="bCategory"></div>
+<div><label>Planned amount</label><input id="bPlanned" type="number" min="0"></div>
+<div><label>Spent amount</label><input id="bSpent" type="number" min="0" value="0"></div>
+<div><label>Month start</label><input id="bMonth" type="date"></div>
+</div>
+<div class="actions">
+<button id="saveBudget">Save budget</button>
+</div>
+<div id="budgetList" class="list"></div>
+</div>
+</section>
+
+<section id="debts" class="page">
+<div class="card">
+<h2>Debt Manager & EMI Reminder</h2>
+<div class="form">
+<div><label>Lender / Bank</label><input id="dLender"></div>
+<div><label>Total amount</label><input id="dTotal" type="number" min="0"></div>
+<div><label>Outstanding</label><input id="dOutstanding" type="number" min="0"></div>
+<div><label>EMI amount</label><input id="dEmi" type="number" min="0" value="0"></div>
+<div><label>Next due date</label><input id="dDue" type="date"></div>
+</div>
+<div class="actions">
+<button id="saveDebt">Save debt</button>
+</div>
+<div id="debtList" class="list"></div>
+</div>
+</section>
+
+<section id="goals" class="page">
+<div class="card">
+<h2>Goal Tracker</h2>
+<div class="form">
+<div><label>Goal name</label><input id="gTitle"></div>
+<div><label>Target amount</label><input id="gTarget" type="number" min=".01"></div>
+<div><label>Current amount</label><input id="gCurrent" type="number" min="0" value="0"></div>
+<div><label>Target date</label><input id="gDate" type="date"></div>
+</div>
+<div class="actions">
+<button id="saveGoal">Save goal</button>
+</div>
+<div id="goalList" class="list"></div>
+</div>
+</section>
+
+<section id="tasks" class="page">
+<div class="card">
+<h2>Task Planner</h2>
+<div class="form">
+<div class="full"><label>Task</label><input id="taskTitle"></div>
+<div><label>Due date</label><input id="taskDate" type="date"></div>
+<div>
+<label>Priority</label>
+<select id="taskPriority">
+<option>Normal</option>
+<option>High</option>
+<option>Low</option>
+</select>
+</div>
+</div>
+<div class="actions">
+<button id="saveTask">Add task</button>
+</div>
+<div id="taskList" class="list"></div>
+</div>
+</section>
+
+<section id="reports" class="page">
+<div class="grid">
+<div class="card">
+<h2>Monthly report</h2>
+<div id="reportSummary"></div>
+<button id="reportCsv" class="gold">Download CSV</button>
+</div>
+<div class="card">
+<h2>Expense categories</h2>
+<div class="chart"><canvas id="catChart"></canvas></div>
+</div>
+</div>
+</section>
+
+</main>
+
+<footer>
+Personal organizer · No guaranteed financial outcome · Not financial, investment, tax or legal advice.
+</footer>
+</div>
+
+<script>
+/* Public browser key only. Never use a Supabase secret/service_role key here. */
+
+const URL_SUPA="https://wtbxjvdurmnnkwkpmpfh.supabase.co";
+const KEY_SUPA="sb_publishable_yeEUK2_3WldcPPELOf8cU__sTXj0hQ";
+
+const supa=window.supabase.createClient(URL_SUPA,KEY_SUPA);
+
+const $=id=>document.getElementById(id);
+let user=null,mode="login";
+let data={transactions:[],budgets:[],debts:[],goals:[],tasks:[]};
+let ch1=null,ch2=null;
+
+const now=new Date();
+const today=new Date(now-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+const month=today.slice(0,8)+"01";
+
+$("txDate").value=today;
+$("bMonth").value=month;
+
+const n=id=>Number($(id).value||0);
+const cash=v=>"₹"+Number(v||0).toLocaleString("en-IN",{maximumFractionDigits:2});
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+
+function msg(el,t,bad=false){
+el.innerHTML=t?`<div class="note ${bad?"err":""}">${esc(t)}</div>`:"";
+}
+
+function item(title,detail,buttons=""){
+return `<div class="item">
+<div><strong>${esc(title)}</strong><small>${esc(detail)}</small></div>
+<div>${buttons}</div>
+</div>`;
+}
+
+async function load(t,col){
+let r=await supa.from(t).select("*").order(col,{ascending:false}).limit(500);
+if(r.error)throw r.error;
+data[t]=r.data||[];
+}
+
+async function refresh(){
+try{
+await Promise.all([
+load("transactions","transaction_date"),
+load("budgets","month_start"),
+load("debts","due_date"),
+load("goals","target_date"),
+load("tasks","due_date")
+]);
+render();
+}catch(e){
+alert("Load error: "+e.message+". Database column names check karein.");
+}
+}
+
+function currentTx(){
+return data.transactions.filter(x=>(x.transaction_date||"").slice(0,7)===today.slice(0,7));
+}
+
+function total(a,k){
+return a.reduce((s,x)=>s+Number(x[k]||0),0);
+}
+
+function render(){
+
+let tx=currentTx();
+let inc=total(tx.filter(x=>x.type==="income"),"amount");
+let exp=total(tx.filter(x=>x.type==="expense"),"amount");
+
+let bud=data.budgets.filter(x=>(x.month_start||"").slice(0,7)===today.slice(0,7));
+
+$("income").textContent=cash(inc);
+$("expense").textContent=cash(exp);
+$("savings").textContent=cash(inc-exp);
+$("budgetTotal").textContent=cash(total(bud,"planned_amount"));
+$("debtTotal").textContent=cash(total(data.debts,"outstanding"));
+$("goalCount").textContent=data.goals.length;
+
+$("snapshot").textContent=
+`${tx.length} transactions · ${data.goals.length} goals · ${data.tasks.filter(x=>!x.is_done).length} pending tasks · ${data.debts.length} debts.`;
+
+let a=[];
+
+bud.forEach(x=>{
+if(Number(x.planned_amount)>0 && Number(x.spent_amount)>=Number(x.planned_amount))
+a.push(`${x.category}: budget limit reached.`);
+});
+
+data.debts.forEach(x=>{
+if(x.due_date){
+let d=Math.ceil((new Date(x.due_date)-new Date(today))/86400000);
+if(d>=0&&d<=7)
+a.push(`${x.lender}: EMI ${cash(x.emi_amount)} due ${d===0?"today":`in ${d} days`}.`);
+}
+});
+
+$("alerts").innerHTML=a.length?
+a.map(x=>`<div class="note">${esc(x)}</div>`).join("") :
+'<p class="muted">No budget or EMI alerts.</p>';
+
+$("txList").innerHTML=data.transactions.length?
+data.transactions.map(x=>item(
+`${x.type} · ${cash(x.amount)}`,
+`${x.category||"Other"} · ${x.transaction_date||""} ${x.note||""}`,
+`<button class="danger" onclick="del('transactions','${x.id}')">Delete</button>`
+)).join("") :
+'<div class="empty">No transactions yet.</div>';
+
+$("budgetList").innerHTML=data.budgets.length?
+data.budgets.map(x=>{
+let p=+x.planned_amount||0,s=+x.spent_amount||0;
+return `<div class="item">
+<div style="flex:1">
+<strong>${esc(x.category)}</strong>
+<small>Planned ${cash(p)} · Spent ${cash(s)} · ${esc(x.month_start)}</small>
+<div class="progress"><i style="width:${p?Math.min(100,s/p*100):0}%"></i></div>
+</div>
+<button class="danger" onclick="del('budgets','${x.id}')">Delete</button>
+</div>`;
+}).join("") :
+'<div class="empty">No budgets added.</div>';
+
+$("debtList").innerHTML=data.debts.length?
+data.debts.map(x=>item(
+x.lender,
+`Outstanding ${cash(x.outstanding)} · EMI ${cash(x.emi_amount)} · Due ${x.due_date||"Not set"}`,
+`<button class="danger" onclick="del('debts','${x.id}')">Delete</button>`
+)).join("") :
+'<div class="empty">No debts added.</div>';
+
+$("goalList").innerHTML=data.goals.length?
+data.goals.map(x=>{
+let p=+x.target_amount||0,c=+x.current_amount||0;
+return `<div class="item">
+<div style="flex:1">
+<strong>${esc(x.title)}</strong>
+<small>${cash(c)} / ${cash(p)} · ${esc(x.target_date||"No target date")}</small>
+<div class="progress"><i style="width:${p?Math.min(100,c/p*100):0}%"></i></div>
+</div>
+<button class="danger" onclick="del('goals','${x.id}')">Delete</button>
+</div>`;
+}).join("") :
+'<div class="empty">No goals added.</div>';
+
+$("taskList").innerHTML=data.tasks.length?
+data.tasks.map(x=>item(
+x.title,
+`${x.priority||"Normal"} · ${x.due_date||"No due date"} · ${x.is_done?"Done":"Pending"}`,
+`<button class="secondary" onclick="toggleTask('${x.id}',${!x.is_done})">${x.is_done?"Undo":"Done"}</button>
+<button class="danger" onclick="del('tasks','${x.id}')">Delete</button>`
+)).join("") :
+'<div class="empty">No tasks added.</div>';
+
+$("recent").innerHTML=data.transactions.slice(0,5).map(x=>item(
+`${x.type} · ${cash(x.amount)}`,
+`${x.category||"Other"} · ${x.transaction_date||""}`
+)).join("") || '<div class="empty">No recent activity.</div>';
+
+$("reportSummary").innerHTML=`
+<p>Income: <b>${cash(inc)}</b></p>
+<p>Expenses: <b>${cash(exp)}</b></p>
+<p>Net savings: <b>${cash(inc-exp)}</b></p>
+<p>Open tasks: <b>${data.tasks.filter(x=>!x.is_done).length}</b></p>`;
+
+if(window.Chart){
+
+if(ch1)ch1.destroy();
+
+ch1=new Chart($("mainChart"),{
+type:"doughnut",
+data:{
+labels:["Income","Expenses"],
+datasets:[{
+data:[inc,exp],
+backgroundColor:["#27c995","#d96a7a"]
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{labels:{color:"#edf4ff"}}}
+}
+});
+
+let cats={};
+
+tx.filter(x=>x.type==="expense").forEach(x=>{
+cats[x.category||"Other"]=(cats[x.category||"Other"]||0)+Number(x.amount);
+});
+
+if(ch2)ch2.destroy();
+
+ch2=new Chart($("catChart"),{
+type:"bar",
+data:{
+labels:Object.keys(cats),
+datasets:[{
+label:"Expense ₹",
+data:Object.values(cats),
+backgroundColor:"#70a9ff"
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{labels:{color:"#edf4ff"}}},
+scales:{
+x:{ticks:{color:"#aab9cf"}},
+y:{ticks:{color:"#aab9cf"}}
+}
+}
+});
+}
+}
+
+async function add(t,obj){
+let r=await supa.from(t).insert({...obj,user_id:user.id});
+if(r.error)throw r.error;
+await refresh();
+}
+
+window.del=async(t,id)=>{
+if(!confirm("Delete this record?"))return;
+let r=await supa.from(t).delete().eq("id",id).eq("user_id",user.id);
+if(r.error)alert(r.error.message);
+else refresh();
+};
+
+window.toggleTask=async(id,v)=>{
+let r=await supa.from("tasks").update({is_done:v}).eq("id",id).eq("user_id",user.id);
+if(r.error)alert(r.error.message);
+else refresh();
+};
+
+function save(id,fn){
+$(id).onclick=async()=>{
+let b=$(id);
+b.disabled=true;
+try{await fn()}
+catch(e){alert("Save error: "+e.message)}
+finally{b.disabled=false}
+};
+}
+
+save("saveTx",async()=>{
+if(n("txAmount")<=0||!$("txCategory").value.trim())
+throw Error("Amount aur category bharein.");
+
+await add("transactions",{
+type:$("txType").value,
+amount:n("txAmount"),
+category:$("txCategory").value.trim(),
+transaction_date:$("txDate").value||today,
+note:$("txNote").value.trim()
+});
+
+["txAmount","txCategory","txNote"].forEach(x=>$(x).value="");
+});
+
+save("saveBudget",async()=>{
+if(!$("bCategory").value.trim())
+throw Error("Category bharein.");
+
+await add("budgets",{
+category:$("bCategory").value.trim(),
+planned_amount:n("bPlanned"),
+spent_amount:n("bSpent"),
+month_start:$("bMonth").value||month
+});
+
+$("bCategory").value="";
+$("bPlanned").value="";
+$("bSpent").value=0;
+});
+
+save("saveDebt",async()=>{
+if(!$("dLender").value.trim())
+throw Error("Lender name bharein.");
+
+await add("debts",{
+lender:$("dLender").value.trim(),
+total_amount:n("dTotal"),
+outstanding:n("dOutstanding"),
+emi_amount:n("dEmi"),
+due_date:$("dDue").value||null
+});
+
+["dLender","dTotal","dOutstanding","dDue"].forEach(x=>$(x).value="");
+$("dEmi").value=0;
+});
+
+save("saveGoal",async()=>{
+if(!$("gTitle").value.trim()||n("gTarget")<=0)
+throw Error("Goal name aur target amount bharein.");
+
+await add("goals",{
+title:$("gTitle").value.trim(),
+target_amount:n("gTarget"),
+current_amount:n("gCurrent"),
+target_date:$("gDate").value||null
+});
+
+["gTitle","gTarget","gDate"].forEach(x=>$(x).value="");
+$("gCurrent").value=0;
+});
+
+save("saveTask",async()=>{
+if(!$("taskTitle").value.trim())
+throw Error("Task name bharein.");
+
+await add("tasks",{
+title:$("taskTitle").value.trim(),
+due_date:$("taskDate").value||null,
+priority:$("taskPriority").value,
+is_done:false
+});
+
+$("taskTitle").value="";
+$("taskDate").value="";
+});
+
+function csv(){
+
+if(!data.transactions.length){
+alert("No transactions to export.");
+return;
+}
+
+let keys=["type","amount","category","transaction_date","note"];
+
+let s=[
+keys.join(","),
+...data.transactions.map(x=>
+keys.map(k=>'"'+String(x[k]??"").replace(/"/g,'""')+'"').join(",")
+)
+].join("\r\n");
+
+let a=document.createElement("a");
+let u=URL.createObjectURL(new Blob([s],{type:"text/csv"}));
+
+a.href=u;
+a.download="life-os-india-report.csv";
+a.click();
+
+URL.revokeObjectURL(u);
+}
+
+$("csv").onclick=csv;
+$("reportCsv").onclick=csv;
+
+document.querySelectorAll("[data-page]").forEach(b=>{
+b.onclick=()=>{
+document.querySelectorAll("[data-page]").forEach(x=>
+x.classList.toggle("active",x===b)
+);
+document.querySelectorAll(".page").forEach(x=>
+x.classList.toggle("active",x.id===b.dataset.page)
+);
+};
+});
+
+function signedIn(u){
+user=u;
+$("auth").classList.add("hidden");
+$("app").classList.remove("hidden");
+$("logout").classList.remove("hidden");
+$("refresh").classList.remove("hidden");
+$("who").textContent=u.email||"";
+refresh();
+}
+
+function signedOut(){
+$("auth").classList.remove("hidden");
+$("app").classList.add("hidden");
+$("logout").classList.add("hidden");
+$("refresh").classList.add("hidden");
+$("who").textContent="";
+user=null;
+}
+
+$("refresh").onclick=refresh;
+
+$("logout").onclick=async()=>{
+let r=await supa.auth.signOut();
+if(r.error)alert(r.error.message);
+};
+
+$("switch").onclick=()=>{
+mode=mode==="login"?"signup":"login";
+$("authTitle").textContent=mode==="signup"?"Create your account":"Welcome back";
+$("authBtn").textContent=mode==="signup"?"Create account":"Login";
+$("switch").textContent=mode==="signup"?"Back to login":"Create account";
+};
+
+$("authBtn").onclick=async()=>{
+
+let email=$("email").value.trim();
+let password=$("password").value;
+
+if(!email||password.length<8){
+msg($("authMsg"),"Valid email aur minimum 8-character password enter karein.",true);
+return;
+}
+
+try{
+
+let r=mode==="signup"?
+await supa.auth.signUp({
+email,password,
+options:{emailRedirectTo:location.href}
+}):
+await supa.auth.signInWithPassword({email,password});
+
+if(r.error)throw r.error;
+
+if(mode==="signup"&&!r.data.session)
+msg($("authMsg"),"Email verification link check karein, phir login karein.");
+else
+signedIn(r.data.user);
+
+}catch(e){
+msg($("authMsg"),e.message,true);
+}
+};
+
+$("forgot").onclick=async()=>{
+let email=$("email").value.trim();
+
+if(!email){
+msg($("authMsg"),"Pehle email bharein.",tru
