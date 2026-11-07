@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIFE OS INDIA | Login</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#090b10;color:#f5f2eb;font-family:Arial,sans-serif}
+.card{width:min(100%,440px);padding:28px;border:1px solid #665638;border-radius:18px;background:#111620}
+.brand{font-size:21px;font-weight:900;letter-spacing:1.5px}.brand span{color:#d8b56d}
+p{color:#a9b0bd;line-height:1.5}label{display:block;margin:16px 0 7px;font-size:13px}
+input{width:100%;padding:14px;border:1px solid #394354;border-radius:9px;background:#090e16;color:white;font-size:16px}
+button{width:100%;padding:14px;margin-top:16px;border:0;border-radius:9px;background:#e3c27e;color:#17130b;font-weight:bold;font-size:15px}
+.secondary{background:transparent;color:#f0d79d;border:1px solid #665638}.row{display:flex;gap:10px}.row button{flex:1}
+#message{min-height:24px;color:#f0d79d;font-size:13px;overflow-wrap:anywhere}.hidden{display:none!important}
+</style></head>
+<body><main class="card">
+<div class="brand">LIFE OS <span>INDIA</span></div><p>YOUR LIFE, IN CONTROL</p>
+<section id="authView"><h2 id="heading">Welcome back</h2><p id="intro">Sign in to open your personal dashboard.</p>
+<label>Email address</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+<label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="At least 8 characters">
+<button id="mainBtn">Log in</button><div class="row"><button class="secondary" id="switchBtn">Create account</button><button class="secondary" id="forgotBtn">Forgot password?</button></div>
+<div id="message"></div></section>
+<section id="signedView" class="hidden"><h2>You're signed in</h2><p id="userEmail"></p><p>Secure account connection is working. Dashboard data modules will be connected in the next step.</p><button id="logoutBtn">Log out</button></section>
+</main>
+<script>
+/* Replace these two placeholders only. Use Project URL + Publishable key.
+   NEVER place a Supabase Secret/service_role key in browser code. */
+const SUPABASE_URL="PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+const SUPABASE_PUBLISHABLE_KEY="PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
+let sb=null,mode="login";
+const $=id=>document.getElementById(id);
+function client(){
+ if(!SUPABASE_URL.startsWith("https://")||!SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_"))throw Error("Add your Supabase Project URL and Publishable key in this file first.");
+ if(!sb)sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+ return sb;
+}
+function msg(t){$("message").textContent=t}
+function signed(user){$("authView").classList.add("hidden");$("signedView").classList.remove("hidden");$("userEmail").textContent=user?.email||""}
+function signedOut(){$("signedView").classList.add("hidden");$("authView").classList.remove("hidden")}
+$("switchBtn").onclick=()=>{mode=mode==="login"?"signup":"login";$("heading").textContent=mode==="signup"?"Create your account":"Welcome back";$("intro").textContent=mode==="signup"?"Register with your email and a password.":"Sign in to open your personal dashboard.";$("mainBtn").textContent=mode==="signup"?"Create account":"Log in";$("switchBtn").textContent=mode==="signup"?"Back to login":"Create account";$("forgotBtn").classList.toggle("hidden",mode==="signup");msg("")};
+$("mainBtn").onclick=async()=>{
+ const email=$("email").value.trim(),password=$("password").value;
+ if(!email||!password)return msg("Email aur password dono bharein.");
+ if(password.length<8)return msg("Password kam se kam 8 characters ka rakhein.");
+ $("mainBtn").disabled=true;
+ try{
+  const s=client();
+  if(mode==="signup"){
+   const {data,error}=await s.auth.signUp({email,password,options:{emailRedirectTo:location.href}});
+   if(error)throw error;
+   if(data.session)signed(data.user);else msg("Signup request successful. Email inbox mein verification link confirm karein, phir login karein.");
+  }else{
+   const {data,error}=await s.auth.signInWithPassword({email,password});
+   if(error)throw error;signed(data.user);
+  }
+ }catch(e){msg(e.message||"Something went wrong.");}
+ finally{$("mainBtn").disabled=false;$("mainBtn").textContent=mode==="signup"?"Create account":"Log in";}
+};
+$("forgotBtn").onclick=async()=>{
+ const email=$("email").value.trim();if(!email)return msg("Pehle email address bharein.");
+ try{const {error}=await client().auth.resetPasswordForEmail(email,{redirectTo:location.href});if(error)throw error;msg("Password reset link email par bhej diya gaya hai.");}catch(e){msg(e.message);}
+};
+$("logoutBtn").onclick=async()=>{try{const {error}=await client().auth.signOut();if(error)throw error;signedOut();}catch(e){msg(e.message);}};
+try{const s=client();s.auth.getSession().then(({data})=>{if(data.session?.user)signed(data.session.user)});s.auth.onAuthStateChange((_event,session)=>{if(session?.user)signed(session.user);else signedOut()});}catch(e){msg(e.message);}
+</script></body></html>
