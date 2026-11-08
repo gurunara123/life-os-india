@@ -704,4 +704,29 @@ $("forgot").onclick=async()=>{
 let email=$("email").value.trim();
 
 if(!email){
-msg($("authMsg"),"Pehle email bharein.",tru
+
+$("forgot").onclick=async()=>{
+let email=$("email").value.trim();
+
+if(!email){
+msg($("authMsg"),"Pehle email bharein.",true);
+return;
+}
+
+try{
+let {error}=await supa.auth.resetPasswordForEmail(email,{
+redirectTo:location.origin+location.pathname
+});
+
+if(error)throw error;
+
+msg($("authMsg"),"Password reset link email par bhej diya gaya hai.",false);
+
+}catch(e){
+msg($("authMsg"),e.message,true);
+}
+};
+
+</script>
+</body>
+</html>
